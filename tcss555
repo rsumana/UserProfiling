@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+from sys import argv
+
+# Read command line arguments and populate environment variables
+from lib.options import get_opts
+opts = get_opts(argv[1:])
+
+# Read profile.csv and load a dictionary
+from lib.read_profile import read_profile
+
+# Assert at each point to check output and print if error
+from lib.assert_return import assert_return
+
+status,data = read_profile(opts)
+assert_return(opts, status, data)
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logging.info("Training data set count: %d" % len(data['training_data']))
+logging.info("Testing data set count: %d" % len(data['testing_data']))
+
+# Load text module for testing and training
+from text.test_and_train import test_and_train
+#test_and_train(opts,data)
+test_and_train(opts,data,field='age')
+#test_and_train(opts,data,field='ope')
+#test_and_train(opts,data,field='con')
+#test_and_train(opts,data,field='ext')
+#test_and_train(opts,data,field='agr')
+#test_and_train(opts,data,field='neu')
+
+for user_id,user_data in data['testing_data'].items():
+    age = None
+    gender = None
+    ope = 0.0
+    con = 0.0
+    ext = 0.0
+    agr = 0.0
+    neu = 0.0
+    for field,field_data in user_data['predictions'].items():
+        field_data = float(field_data)
+        if field == 'age':
+            if field_data == 0:
+                age = "xx-24"
+            elif field_data == 1:
+                age = "25-34"
+            elif field_data == 2:
+                age = "35-49"
+            else:
+                age = "50-xx"
+        elif field == 'gender':
+            if field_data == 0:
+                gender = "male"
+            else:
+                gender = "female"
+        else:
+            exec("%s=%f" % (field, float(field_data)))
+    result_file = open("%s/%s.xml" % (opts.resultsdir,user_id),"w")
+    xml = '<userId="%s" age_group="%s" gender="%s" extrovert="%f" neurotic="%f" agreeable="%f" conscientious="%f" open="%f" />' % (user_id,age,gender,ext,neu,agr,con,ope)
+    result_file.write(xml)
+    result_file.close()
+ 
+#from images.caffe_interface import predict_image
+#from text.megam_input import age_bucket_calculator
+#predict_image(opts, data, age_bucket_calculator)
